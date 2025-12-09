@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
+import ClickerButton from '@/components/ClickerButton';
+import UpgradeShop from '@/components/UpgradeShop';
+import PremiumDialog from '@/components/PremiumDialog';
+import AchievementsDialog from '@/components/AchievementsDialog';
 
 interface Upgrade {
   id: number;
@@ -215,292 +216,46 @@ const Index = () => {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
-          <div className="lg:col-span-2 space-y-4">
-            <Card className="bg-zinc-900/90 border-red-900/50 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-black text-red-600 mb-1">
-                      {Math.floor(clicks).toLocaleString()}
-                    </div>
-                    <div className="text-gray-400 text-xs">ОЧКИ</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-black text-yellow-500 mb-1">
-                      {level}
-                    </div>
-                    <div className="text-gray-400 text-xs">УРОВЕНЬ</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-black text-green-500 mb-1">
-                      {clicksPerSecond.toFixed(1)}
-                    </div>
-                    <div className="text-gray-400 text-xs">ОЧКОВ/СЕК</div>
-                  </div>
-                </div>
+          <ClickerButton
+            clicks={clicks}
+            level={level}
+            experience={experience}
+            clicksPerSecond={clicksPerSecond}
+            comboCount={comboCount}
+            criticalHit={criticalHit}
+            multiplier={multiplier}
+            achievementBonus={achievementBonus}
+            achievementsUnlocked={achievements.filter(a => a.unlocked).length}
+            achievementsTotal={achievements.length}
+            showParticles={showParticles}
+            totalClicks={totalClicks}
+            premiumBonus={premiumBonus}
+            ownedUpgradesCount={ownedUpgrades.reduce((s, u) => s + u.owned, 0)}
+            onClick={handleClick}
+            onBuyMultiplier={buyMultiplier}
+          />
 
-                <div className="mb-4">
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Опыт до {level + 1} уровня</span>
-                    <span>{Math.floor(experience)}/{level * 100}</span>
-                  </div>
-                  <Progress value={(experience / (level * 100)) * 100} className="h-2" />
-                </div>
-
-                {comboCount > 1 && (
-                  <div className="text-center mb-4">
-                    <Badge className="bg-yellow-600 text-black text-lg font-bold px-4 py-2 animate-pulse">
-                      КОМБО x{comboCount}!
-                    </Badge>
-                  </div>
-                )}
-
-                <div className="relative flex justify-center">
-                  <Button
-                    onClick={handleClick}
-                    className={`relative w-72 h-72 rounded-full bg-gradient-to-br from-red-600 to-red-900 hover:from-red-700 hover:to-red-950 p-0 transition-all duration-200 hover:scale-105 active:scale-95 shadow-2xl overflow-hidden group border-4 ${
-                      criticalHit ? 'border-yellow-400 shadow-yellow-400/50' : 'border-red-800'
-                    } ${criticalHit ? 'animate-pulse' : ''}`}
-                  >
-                    <div className="absolute inset-0 rounded-full overflow-hidden">
-                      <img 
-                        src="https://unlock-rent.ru/eric.jpg" 
-                        alt="Eric"
-                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
-                        draggable="false"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/60 group-hover:opacity-50 transition-opacity" />
-                    </div>
-                    
-                    {showParticles.map(particle => (
-                      <div
-                        key={particle.id}
-                        className="absolute text-yellow-400 font-black text-2xl pointer-events-none z-50 drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]"
-                        style={{
-                          left: particle.x,
-                          top: particle.y,
-                          animation: 'floatUp 1s ease-out forwards'
-                        }}
-                      >
-                        +{particle.value}
-                      </div>
-                    ))}
-                  </Button>
-                </div>
-
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-red-950/30 rounded-lg border border-red-900/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="text-sm font-bold">Множитель</div>
-                        <div className="text-xs text-gray-400">x{multiplier} за клик</div>
-                      </div>
-                      <Icon name="Zap" size={24} className="text-yellow-500" />
-                    </div>
-                    <Button
-                      onClick={buyMultiplier}
-                      disabled={clicks < multiplier * 1000}
-                      className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-sm"
-                      size="sm"
-                    >
-                      Купить ({(multiplier * 1000).toLocaleString()})
-                    </Button>
-                  </div>
-
-                  <div className="p-3 bg-purple-950/30 rounded-lg border border-purple-900/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="text-sm font-bold">Бонусы</div>
-                        <div className="text-xs text-gray-400">x{achievementBonus.toFixed(1)}</div>
-                      </div>
-                      <Icon name="Star" size={24} className="text-purple-500" />
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      Разблокировано: {achievements.filter(a => a.unlocked).length}/{achievements.length}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900/90 border-red-900/50 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="p-3 bg-black/30 rounded text-center">
-                    <div className="text-xl font-bold text-white">{totalClicks.toLocaleString()}</div>
-                    <div className="text-xs text-gray-400">Кликов</div>
-                  </div>
-                  <div className="p-3 bg-black/30 rounded text-center">
-                    <div className="text-xl font-bold text-red-600">{multiplier}x</div>
-                    <div className="text-xs text-gray-400">Сила</div>
-                  </div>
-                  <div className="p-3 bg-black/30 rounded text-center">
-                    <div className="text-xl font-bold text-yellow-500">{(premiumBonus * achievementBonus).toFixed(1)}x</div>
-                    <div className="text-xs text-gray-400">Бонус</div>
-                  </div>
-                  <div className="p-3 bg-black/30 rounded text-center">
-                    <div className="text-xl font-bold text-green-500">{ownedUpgrades.reduce((s, u) => s + u.owned, 0)}</div>
-                    <div className="text-xs text-gray-400">Улучшений</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div>
-            <Card className="bg-zinc-900/90 border-red-900/50 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <h2 className="text-xl font-bold mb-4 text-red-600 flex items-center gap-2">
-                  <Icon name="ShoppingCart" size={20} />
-                  Магазин
-                </h2>
-
-                <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                  {ownedUpgrades.map(upgrade => {
-                    const cost = Math.floor(upgrade.cost * Math.pow(1.15, upgrade.owned));
-                    const canBuy = clicks >= cost;
-                    const production = upgrade.cps * upgrade.owned * premiumBonus * achievementBonus;
-
-                    return (
-                      <div
-                        key={upgrade.id}
-                        className={`p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer ${
-                          canBuy 
-                            ? 'bg-red-950/40 border-red-600 hover:border-red-500 hover:scale-[1.02]' 
-                            : 'bg-black/30 border-red-900/30 opacity-60'
-                        }`}
-                        onClick={() => canBuy && buyUpgrade(upgrade.id)}
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="p-2 bg-red-600/20 rounded">
-                            <Icon name={upgrade.icon} size={20} className="text-red-600" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-bold text-sm">{upgrade.name}</div>
-                            <div className="text-xs text-gray-400">
-                              {upgrade.cps.toFixed(1)}/сек
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-black text-red-600">
-                              {cost.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              ×{upgrade.owned}
-                            </div>
-                          </div>
-                        </div>
-
-                        {upgrade.owned > 0 && (
-                          <div className="text-xs text-gray-400 border-t border-red-900/30 pt-2">
-                            Даёт: <span className="text-green-500 font-semibold">
-                              {production.toFixed(1)}/сек
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <UpgradeShop
+            upgrades={ownedUpgrades}
+            clicks={clicks}
+            premiumBonus={premiumBonus}
+            achievementBonus={achievementBonus}
+            onBuyUpgrade={buyUpgrade}
+          />
         </div>
       </div>
 
-      <Dialog open={showPremiumDialog} onOpenChange={setShowPremiumDialog}>
-        <DialogContent className="bg-zinc-900 border-yellow-600 text-white max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 flex items-center gap-2">
-              <Icon name="Crown" size={32} />
-              ПРЕМИУМ ВЕРСИЯ
-            </DialogTitle>
-            <DialogDescription className="text-gray-300 text-base">
-              Получите невероятные преимущества!
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 my-4">
-            <div className="p-4 bg-gradient-to-r from-yellow-950/50 to-yellow-900/30 rounded-lg border border-yellow-600/50">
-              <h3 className="font-bold text-xl mb-3 text-yellow-400">Что входит:</h3>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <Icon name="Check" size={16} className="text-green-500" />
-                  <span>× <strong className="text-yellow-400">3 бонус</strong> ко всем очкам</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Icon name="Check" size={16} className="text-green-500" />
-                  <span>Эксклюзивный <strong className="text-yellow-400">VIP значок</strong></span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Icon name="Check" size={16} className="text-green-500" />
-                  <span>Увеличенные <strong className="text-yellow-400">шансы крита</strong></span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Icon name="Check" size={16} className="text-green-500" />
-                  <span><strong className="text-yellow-400">Быстрая прокачка</strong> уровней</span>
-                </li>
-              </ul>
-            </div>
+      <PremiumDialog
+        isOpen={showPremiumDialog}
+        onClose={() => setShowPremiumDialog(false)}
+        onPurchase={handlePremiumPurchase}
+      />
 
-            <div className="text-center">
-              <div className="text-4xl font-black text-yellow-400 mb-1">300₽</div>
-              <div className="text-sm text-gray-400">в месяц</div>
-            </div>
-
-            <Button 
-              onClick={handlePremiumPurchase}
-              className="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-700 hover:to-yellow-600 text-black font-bold text-lg py-6"
-            >
-              <Icon name="CreditCard" size={20} className="mr-2" />
-              Оплатить через СБП
-            </Button>
-
-            <p className="text-xs text-gray-500 text-center">
-              После оплаты через Сбербанк Онлайн премиум активируется автоматически
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showAchievements} onOpenChange={setShowAchievements}>
-        <DialogContent className="bg-zinc-900 border-red-600 text-white max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-black text-red-600 flex items-center gap-2">
-              <Icon name="Trophy" size={32} />
-              Достижения
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-            {achievements.map(achievement => (
-              <div 
-                key={achievement.id}
-                className={`p-4 rounded-lg border-2 ${
-                  achievement.unlocked 
-                    ? 'bg-gradient-to-br from-yellow-950/50 to-yellow-900/30 border-yellow-600' 
-                    : 'bg-black/30 border-gray-700 opacity-50'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <Icon 
-                    name={achievement.unlocked ? 'CheckCircle' : 'Circle'} 
-                    size={24} 
-                    className={achievement.unlocked ? 'text-yellow-400' : 'text-gray-600'} 
-                  />
-                  <div className="flex-1">
-                    <div className="font-bold text-sm mb-1">{achievement.name}</div>
-                    <div className="text-xs text-gray-400 mb-2">{achievement.description}</div>
-                    <Badge variant={achievement.unlocked ? 'default' : 'secondary'} className="text-xs">
-                      Бонус: x{achievement.bonus}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AchievementsDialog
+        isOpen={showAchievements}
+        onClose={() => setShowAchievements(false)}
+        achievements={achievements}
+      />
 
       <style>{`
         @keyframes floatUp {
