@@ -1,290 +1,310 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
-import ClickerButton from '@/components/ClickerButton';
-import UpgradeShop from '@/components/UpgradeShop';
-import PremiumDialog from '@/components/PremiumDialog';
-import AchievementsDialog from '@/components/AchievementsDialog';
 
-interface Upgrade {
+interface Category {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+  count: number;
+  gradient: string;
+}
+
+interface Product {
   id: number;
   name: string;
-  cost: number;
-  cps: number;
-  owned: number;
+  price: string;
+  category: string;
+  badge?: string;
   icon: string;
 }
 
-interface Achievement {
-  id: number;
-  name: string;
-  description: string;
-  requirement: number;
-  unlocked: boolean;
-  bonus: number;
-}
-
 const Index = () => {
-  const [clicks, setClicks] = useState(0);
-  const [totalClicks, setTotalClicks] = useState(0);
-  const [clicksPerSecond, setClicksPerSecond] = useState(0);
-  const [multiplier, setMultiplier] = useState(1);
-  const [level, setLevel] = useState(1);
-  const [experience, setExperience] = useState(0);
-  const [isPremium, setIsPremium] = useState(false);
-  const [showPremiumDialog, setShowPremiumDialog] = useState(false);
-  const [showAchievements, setShowAchievements] = useState(false);
-  const [comboCount, setComboCount] = useState(0);
-  const [lastClickTime, setLastClickTime] = useState(0);
-  const [showParticles, setShowParticles] = useState<{id: number, x: number, y: number, value: number}[]>([]);
-  const [criticalHit, setCriticalHit] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [lockAnimating, setLockAnimating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const initialUpgrades: Upgrade[] = [
-    { id: 1, name: 'Новичок', cost: 15, cps: 0.1, owned: 0, icon: 'User' },
-    { id: 2, name: 'Ученик', cost: 100, cps: 1, owned: 0, icon: 'GraduationCap' },
-    { id: 3, name: 'Мастер', cost: 500, cps: 5, owned: 0, icon: 'Award' },
-    { id: 4, name: 'Эксперт', cost: 2000, cps: 20, owned: 0, icon: 'Target' },
-    { id: 5, name: 'Легенда', cost: 10000, cps: 100, owned: 0, icon: 'Crown' },
-    { id: 6, name: 'Бог', cost: 50000, cps: 500, owned: 0, icon: 'Sparkles' },
+  const categories: Category[] = [
+    {
+      id: 1,
+      title: 'Аренда лицензий',
+      description: 'Временный доступ к профессиональному ПО',
+      icon: 'Clock',
+      count: 12,
+      gradient: 'from-purple-600 to-blue-600'
+    },
+    {
+      id: 2,
+      title: 'Лицензии навсегда',
+      description: 'Полный доступ без ограничений',
+      icon: 'Key',
+      count: 8,
+      gradient: 'from-pink-600 to-purple-600'
+    },
+    {
+      id: 3,
+      title: 'Пополнение кредитов',
+      description: 'Быстрое пополнение баланса',
+      icon: 'CreditCard',
+      count: 15,
+      gradient: 'from-cyan-600 to-blue-600'
+    },
+    {
+      id: 4,
+      title: 'Софт и инструменты',
+      description: 'Программы для работы с устройствами',
+      icon: 'Laptop',
+      count: 20,
+      gradient: 'from-violet-600 to-purple-600'
+    }
   ];
 
-  const [ownedUpgrades, setOwnedUpgrades] = useState<Upgrade[]>(initialUpgrades);
+  const products: Product[] = [
+    { id: 1, name: 'iRemove Tools', price: '500₽/мес', category: 'Аренда лицензий', badge: 'Хит', icon: 'Smartphone' },
+    { id: 2, name: 'CheckM8', price: '800₽/мес', category: 'Аренда лицензий', icon: 'Cpu' },
+    { id: 3, name: 'UnlockTool', price: '1200₽', category: 'Лицензии навсегда', badge: 'Новинка', icon: 'Lock' },
+    { id: 4, name: 'FMI OFF', price: '600₽/мес', category: 'Аренда лицензий', icon: 'Shield' },
+    { id: 5, name: 'GsmServer Credits', price: 'от 100₽', category: 'Пополнение кредитов', icon: 'DollarSign' },
+    { id: 6, name: 'NCK Box Credits', price: 'от 150₽', category: 'Пополнение кредитов', icon: 'Coins' },
+    { id: 7, name: 'iTools Full', price: '2500₽', category: 'Софт и инструменты', badge: 'Pro', icon: 'Wrench' },
+    { id: 8, name: '3uTools Premium', price: '400₽/мес', category: 'Софт и инструменты', icon: 'Tool' },
+  ];
 
-  const [achievements, setAchievements] = useState<Achievement[]>([
-    { id: 1, name: 'Первый клик', description: 'Сделай свой первый клик', requirement: 1, unlocked: false, bonus: 1.1 },
-    { id: 2, name: 'Сотня!', description: 'Набери 100 очков', requirement: 100, unlocked: false, bonus: 1.15 },
-    { id: 3, name: 'Тысяча!', description: 'Набери 1000 очков', requirement: 1000, unlocked: false, bonus: 1.2 },
-    { id: 4, name: 'Кликер', description: 'Сделай 100 кликов', requirement: 100, unlocked: false, bonus: 1.25 },
-    { id: 5, name: 'Маньяк', description: 'Сделай 1000 кликов', requirement: 1000, unlocked: false, bonus: 1.5 },
-    { id: 6, name: 'Миллионер', description: 'Набери 1,000,000 очков', requirement: 1000000, unlocked: false, bonus: 2 },
-  ]);
-
-  const premiumBonus = isPremium ? 3 : 1;
-  const achievementBonus = achievements.filter(a => a.unlocked).reduce((acc, a) => acc * a.bonus, 1);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const totalCps = ownedUpgrades.reduce((sum, upgrade) => sum + (upgrade.cps * upgrade.owned), 0);
-      const finalCps = totalCps * premiumBonus * achievementBonus;
-      setClicksPerSecond(finalCps);
-      if (finalCps > 0) {
-        setClicks(prev => prev + finalCps);
-        setExperience(prev => prev + finalCps * 0.1);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [ownedUpgrades, premiumBonus, achievementBonus]);
-
-  useEffect(() => {
-    const expNeeded = level * 100;
-    if (experience >= expNeeded) {
-      setLevel(prev => prev + 1);
-      setExperience(0);
-      setMultiplier(prev => prev + 1);
-    }
-  }, [experience, level]);
-
-  useEffect(() => {
-    setAchievements(prev => prev.map(ach => {
-      if (!ach.unlocked) {
-        if (ach.requirement <= (ach.id <= 3 ? clicks : totalClicks)) {
-          return { ...ach, unlocked: true };
-        }
-      }
-      return ach;
-    }));
-  }, [clicks, totalClicks]);
-
-  useEffect(() => {
-    if (comboCount > 0) {
-      const timer = setTimeout(() => setComboCount(0), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [lastClickTime]);
-
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const now = Date.now();
-    const timeDiff = now - lastClickTime;
-    
-    let comboBonus = 1;
-    if (timeDiff < 300) {
-      setComboCount(prev => prev + 1);
-      comboBonus = 1 + (comboCount * 0.1);
-    } else {
-      setComboCount(1);
-    }
-    setLastClickTime(now);
-
-    const isCrit = Math.random() < 0.15;
-    const critMultiplier = isCrit ? 3 : 1;
-    
-    if (isCrit) {
-      setCriticalHit(true);
-      setTimeout(() => setCriticalHit(false), 300);
-    }
-
-    const clickValue = Math.floor(1 * multiplier * comboBonus * critMultiplier * premiumBonus * achievementBonus);
-    
-    setClicks(prev => prev + clickValue);
-    setTotalClicks(prev => prev + 1);
-    setExperience(prev => prev + clickValue * 0.5);
-    
-    const particleId = Date.now() + Math.random();
-    setShowParticles(prev => [...prev, { id: particleId, x, y, value: clickValue }]);
-    
-    setTimeout(() => {
-      setShowParticles(prev => prev.filter(p => p.id !== particleId));
-    }, 1000);
+  const handleCategoryClick = (category: Category) => {
+    setSelectedCategory(category);
   };
 
-  const buyUpgrade = (upgradeId: number) => {
-    const upgrade = ownedUpgrades.find(u => u.id === upgradeId);
-    if (!upgrade) return;
-
-    const cost = Math.floor(upgrade.cost * Math.pow(1.15, upgrade.owned));
-    
-    if (clicks >= cost) {
-      setClicks(prev => prev - cost);
-      setOwnedUpgrades(prev => prev.map(u => 
-        u.id === upgradeId 
-          ? { ...u, owned: u.owned + 1 }
-          : u
-      ));
-      setExperience(prev => prev + 10);
-    }
+  const handleLockClick = () => {
+    setLockAnimating(true);
+    setTimeout(() => setLockAnimating(false), 600);
   };
 
-  const buyMultiplier = () => {
-    const cost = multiplier * 1000;
-    if (clicks >= cost) {
-      setClicks(prev => prev - cost);
-      setMultiplier(prev => prev + 1);
-    }
-  };
+  const filteredProducts = selectedCategory
+    ? products.filter(p => p.category === selectedCategory.title)
+    : products;
 
-  const handlePremiumPurchase = () => {
-    window.open('https://www.sberbank.com/ru/person/dist_services/sberpay', '_blank');
-    setTimeout(() => {
-      setIsPremium(true);
-      setShowPremiumDialog(false);
-    }, 2000);
-  };
+  const searchedProducts = searchQuery
+    ? filteredProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : filteredProducts;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-hidden">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
+    <div className="min-h-screen bg-[#030014] text-white overflow-hidden relative">
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-cyan-900/20" />
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyMDQsMTY2LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
       
-      <div className="relative z-10 container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="text-center flex-1">
-            <h1 className="text-5xl md:text-7xl font-black text-red-600 tracking-tighter mb-1 animate-scale-in">
-              ERIC SEX
-            </h1>
-            <p className="text-red-500/60 text-sm tracking-[0.2em] uppercase">Ultimate Clicker</p>
+      <div className="relative z-10 container mx-auto px-4 py-8 max-w-6xl">
+        <div className="text-center mb-12 animate-fade-in">
+          <div 
+            className="inline-block mb-6 cursor-pointer"
+            onClick={handleLockClick}
+          >
+            <div className={`text-8xl transition-all duration-500 ${lockAnimating ? 'scale-110 rotate-12' : ''}`}>
+              {lockAnimating ? '🔓' : '🔒'}
+            </div>
           </div>
           
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setShowAchievements(true)}
-              variant="outline" 
-              className="border-red-600 text-red-600 hover:bg-red-600/20"
-            >
-              <Icon name="Trophy" size={20} />
+          <h1 className="text-5xl md:text-7xl font-black mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent animate-scale-in">
+            UNLOCK-RENT
+          </h1>
+          <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-8">
+            Профессиональные решения для разблокировки и ремонта мобильных устройств
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+            <div className="relative w-full sm:w-96">
+              <Icon name="Search" size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Поиск товаров..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-white/5 border-purple-500/30 focus:border-purple-500 text-white placeholder:text-gray-500 backdrop-blur-sm"
+              />
+            </div>
+            <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold">
+              <Icon name="Phone" size={18} className="mr-2" />
+              Связаться
             </Button>
-            {!isPremium && (
-              <Button 
-                onClick={() => setShowPremiumDialog(true)}
-                className="bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-700 hover:to-yellow-600 text-black font-bold"
-              >
-                <Icon name="Crown" size={20} className="mr-2" />
-                ПРЕМИУМ
-              </Button>
-            )}
-            {isPremium && (
-              <Badge className="bg-gradient-to-r from-yellow-600 to-yellow-500 text-black text-sm py-2 px-4">
-                <Icon name="Crown" size={16} className="mr-1" />
-                VIP
-              </Badge>
-            )}
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
-          <ClickerButton
-            clicks={clicks}
-            level={level}
-            experience={experience}
-            clicksPerSecond={clicksPerSecond}
-            comboCount={comboCount}
-            criticalHit={criticalHit}
-            multiplier={multiplier}
-            achievementBonus={achievementBonus}
-            achievementsUnlocked={achievements.filter(a => a.unlocked).length}
-            achievementsTotal={achievements.length}
-            showParticles={showParticles}
-            totalClicks={totalClicks}
-            premiumBonus={premiumBonus}
-            ownedUpgradesCount={ownedUpgrades.reduce((s, u) => s + u.owned, 0)}
-            onClick={handleClick}
-            onBuyMultiplier={buyMultiplier}
-          />
-
-          <UpgradeShop
-            upgrades={ownedUpgrades}
-            clicks={clicks}
-            premiumBonus={premiumBonus}
-            achievementBonus={achievementBonus}
-            onBuyUpgrade={buyUpgrade}
-          />
+        <div className="grid md:grid-cols-2 gap-4 md:gap-6 mb-12">
+          {categories.map((category, index) => (
+            <Card
+              key={category.id}
+              className="group cursor-pointer bg-white/5 border-purple-500/20 hover:border-purple-500/50 backdrop-blur-md transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20"
+              onClick={() => handleCategoryClick(category)}
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className={`p-4 rounded-xl bg-gradient-to-br ${category.gradient} group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon name={category.icon} size={32} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold mb-2 group-hover:text-purple-400 transition-colors">
+                      {category.title}
+                    </h3>
+                    <p className="text-gray-400 text-sm mb-3">{category.description}</p>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary" className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                        {category.count} товаров
+                      </Badge>
+                      <Icon name="ArrowRight" size={20} className="text-purple-400 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+
+        {(selectedCategory || searchQuery) && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                {selectedCategory ? selectedCategory.title : 'Результаты поиска'}
+              </h2>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSelectedCategory(null);
+                  setSearchQuery('');
+                }}
+                className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+              >
+                <Icon name="X" size={18} className="mr-2" />
+                Закрыть
+              </Button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {searchedProducts.map((product) => (
+                <Card
+                  key={product.id}
+                  className="group cursor-pointer bg-white/5 border-purple-500/20 hover:border-pink-500/50 backdrop-blur-md transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:shadow-pink-500/20"
+                  onClick={() => setSelectedProduct(product)}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="p-3 rounded-lg bg-gradient-to-br from-purple-600/20 to-pink-600/20 group-hover:scale-110 transition-transform">
+                        <Icon name={product.icon} size={24} className="text-purple-400" />
+                      </div>
+                      {product.badge && (
+                        <Badge className="bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0">
+                          {product.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <h3 className="font-bold text-lg mb-2 group-hover:text-purple-400 transition-colors">
+                      {product.name}
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-black text-purple-400">{product.price}</span>
+                      <Icon name="ShoppingCart" size={20} className="text-gray-400 group-hover:text-pink-400 transition-colors" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {searchedProducts.length === 0 && (
+              <div className="text-center py-12">
+                <Icon name="Search" size={48} className="mx-auto mb-4 text-gray-600" />
+                <p className="text-gray-400 text-lg">Товары не найдены</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        <Card className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-500/30 backdrop-blur-md">
+          <CardContent className="p-8 text-center">
+            <Icon name="Star" size={48} className="mx-auto mb-4 text-yellow-400" />
+            <h3 className="text-2xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Почему выбирают нас?
+            </h3>
+            <div className="grid md:grid-cols-3 gap-6 mt-8">
+              <div className="text-center">
+                <div className="text-4xl mb-2">⚡</div>
+                <h4 className="font-bold mb-2">Быстро</h4>
+                <p className="text-gray-400 text-sm">Мгновенная активация лицензий</p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl mb-2">🛡️</div>
+                <h4 className="font-bold mb-2">Надёжно</h4>
+                <p className="text-gray-400 text-sm">100% рабочие решения</p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl mb-2">💬</div>
+                <h4 className="font-bold mb-2">Поддержка 24/7</h4>
+                <p className="text-gray-400 text-sm">Всегда на связи</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <PremiumDialog
-        isOpen={showPremiumDialog}
-        onClose={() => setShowPremiumDialog(false)}
-        onPurchase={handlePremiumPurchase}
-      />
+      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+        <DialogContent className="bg-[#0a0520] border-purple-500/30 text-white max-w-md backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              {selectedProduct?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div className="flex items-center justify-center p-8 bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-xl">
+              <Icon name={selectedProduct?.icon || 'Package'} size={64} className="text-purple-400" />
+            </div>
 
-      <AchievementsDialog
-        isOpen={showAchievements}
-        onClose={() => setShowAchievements(false)}
-        achievements={achievements}
-      />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                <span className="text-gray-400">Цена:</span>
+                <span className="text-2xl font-black text-purple-400">{selectedProduct?.price}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
+                <span className="text-gray-400">Категория:</span>
+                <Badge className="bg-purple-500/20 text-purple-300">{selectedProduct?.category}</Badge>
+              </div>
+
+              <div className="p-4 bg-white/5 rounded-lg">
+                <h4 className="font-bold mb-2">Описание:</h4>
+                <p className="text-gray-400 text-sm">
+                  Профессиональное решение для работы с мобильными устройствами. 
+                  Полная техническая поддержка и обновления включены.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold">
+                <Icon name="ShoppingCart" size={18} className="mr-2" />
+                Заказать
+              </Button>
+              <Button variant="outline" className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10">
+                <Icon name="MessageCircle" size={18} className="mr-2" />
+                Вопрос
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <style>{`
-        @keyframes floatUp {
-          0% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-120px) scale(1.8);
-          }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(0,0,0,0.3);
-          border-radius: 10px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #dc2626;
-          border-radius: 10px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #b91c1c;
+        .animate-fade-in {
+          animation: fadeIn 0.6s ease-out;
         }
       `}</style>
     </div>
